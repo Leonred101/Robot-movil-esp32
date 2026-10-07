@@ -4,45 +4,53 @@
 #include "sensor_light.h"
 #include "sensor_ir.h"
 
-// Definimos un tipo de función que representa la lectura de un sensor.
-// Cada sensor tendrá una función que se ejecuta cuando está activo.
+// Function type for sensor reading
 typedef void (*SensorCallback)();
 
-// Estructura para asociar un nombre de comando con la función del sensor.
+// Structure to associate command, function, and menu description
 struct SensorCommand {
-  const char* name;     // Nombre que llega por Serial, por ejemplo: "infrared"
-  SensorCallback execute; // Función que toma la medición del sensor
+  const char* name;
+  SensorCallback execute;
+  const char* description;
 };
 
-// Tabla de sensores disponibles.
-// Por ahora solo queda activado el sensor IR; el resto está comentado.
+// Available sensors table
 const SensorCommand SENSOR_TABLE[] = {
-  {"contact",  readContact},
-  {"photora",  readPhotoRA},
-  {"photord",  readPhotoRD},
-  {"temp",     readTemp},
-  {"infrared", readIR}
+  {"contact",  readContact, "Digital contact sensor"},
+  {"photora",  readPhotoRA, "Photoresistor (Analog reading)"},
+  {"photord",  readPhotoRD, "Photoresistor (LM339 digital output)"},
+  {"temp",     readTemp,    "LM35 temperature sensor"},
+  {"infrared", readIR,      "Sharp infrared distance sensor"}
 };
 
-// Número de elementos en la tabla de sensores.
 constexpr size_t NUM_SENSORS = sizeof(SENSOR_TABLE) / sizeof(SENSOR_TABLE[0]);
 
-// Puntero al sensor actualmente activo.
-// Mientras este apuntador no sea nulo, el sistema seguirá haciendo lecturas.
-SensorCallback activeSensorCallback = nullptr;
+bool firstRun = true; // Control flag for the first iteration
 
-// Frecuencia moderada para que la lectura sea visible y legible.
-// Ajusta el valor de 200 ms si quieres hacerlo más rápido o más lento.
-const uint32_t SENSOR_DELAY_MS = 200;
+void printMenu() {
+  Serial.println();
+  Serial.println("==================================================");
+  Serial.println("          ESP32 SENSOR SYSTEM - MENU              ");
+  Serial.println("==================================================");
+  Serial.println("Available commands:");
+  Serial.println("  h                 -> Show this help menu");
+  for (size_t i = 0; i < NUM_SENSORS; ++i) {
+    Serial.print("  shs ");
+    Serial.print(SENSOR_TABLE[i].name);
+    Serial.print("\t-> Single reading of ");
+    Serial.println(SENSOR_TABLE[i].description);
+  }
+  Serial.println("==================================================");
+  Serial.println();
+}
 
 void setup() {
-  // Inicia la comunicación serie para recibir comandos y enviar mediciones.
   Serial.begin(115200);
 
-  // Ajusta la escala del ADC para leer mejor la señal analógica del IR.
+  // Full scale for analog readings (0 to ~3.1 V)
   analogSetAttenuation(ADC_11db);
 
-  // Inicializa los sensores que sí se usarán en esta etapa.
+  // Hardware initialization
   initContact();
   initLight();
   initTemp();
@@ -50,47 +58,47 @@ void setup() {
 }
 
 void loop() {
-  // Primero revisamos si el usuario envió un comando por Serial.
-  // Esto permite cambiar de sensor sin que el sensor activo bloquee la entrada.
+  // Automatic display only on the first iteration
+  if (firstRun) {
+    printMenu();
+    firstRun = false;
+  }
+
+  // On-demand Serial command processing
   if (Serial.available() > 0) {
     String input = Serial.readStringUntil('\n');
     input.trim();
 
-    // Si el usuario pulsa Enter sin texto, se detiene la lectura actual.
     if (input.length() == 0) {
-      activeSensorCallback = nullptr;
-      Serial.println("Lectura detenida");
+      return; // Discard empty Enter keystrokes
     }
-    // Comando para activar un sensor.
+
+    // Display menu when pressing 'h' or 'H'
+    if (input.equalsIgnoreCase("h") || input.equalsIgnoreCase("help")) {
+      printMenu();
+    }
+    // Execute single measurement for the requested sensor
     else if (input.startsWith("shs ")) {
       String sensorReq = input.substring(4);
       sensorReq.trim();
 
       bool commandFound = false;
 
-      // Busca el nombre del sensor dentro de la tabla de comandos.
       for (size_t i = 0; i < NUM_SENSORS; ++i) {
         if (sensorReq.equalsIgnoreCase(SENSOR_TABLE[i].name)) {
-          // Se activa el sensor solicitado para que siga leyendo con el retraso definido.
-          activeSensorCallback = SENSOR_TABLE[i].execute;
+          // Trigger the function once
+          SENSOR_TABLE[i].execute();
           commandFound = true;
           break;
         }
       }
 
-      // Si no existe el comando, se deja sin sensor activo.
       if (!commandFound) {
-        Serial.println("Error: Sensor no reconocido");
-        activeSensorCallback = nullptr;
+        Serial.println("Error: Sensor not recognized. Type 'h' to see the command list.");
       }
     }
-  }
-
-  // La lectura del sensor se repite cada 200 ms para que sea visible y cómoda.
-  // Solo se detiene cuando el usuario presiona Enter vacío.
-  if (activeSensorCallback != nullptr) {
-    activeSensorCallback();
-    delay(SENSOR_DELAY_MS);
+    else {
+      Serial.println("Invalid command. Type 'h' to check the menu.");
+    }
   }
 }
- 

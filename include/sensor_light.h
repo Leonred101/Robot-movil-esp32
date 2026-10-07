@@ -1,22 +1,22 @@
 #pragma once
 #include "config.h"
 
-// Inicialización de la parte analógica y digital del sensor de luz.
+// Initialization of the analog and digital parts of the light sensor.
 inline void initLight() {
-  pinMode(PIN_PHOTORA, INPUT); // Entrada analógica
-  pinMode(PIN_PHOTORD, INPUT_PULLUP); // Entrada digital con pull-up
+  pinMode(PIN_PHOTORA, INPUT); // Analog input
+  pinMode(PIN_PHOTORD, INPUT_PULLUP); // Digital input with pull-up
 }
 
-// Lectura analógica del sensor de luz PhotoRA.
+// Analog reading of the PhotoRA light sensor.
 inline void readPhotoRA() {
   int raw = analogRead(PIN_PHOTORA);
-  Serial.print("photora ");
+  //Serial.print("photora ");
   Serial.println(raw);
 }
 
-// Lectura digital del sensor de luz PhotoRD.
+// Digital reading of the PhotoRD light sensor.
 inline void readPhotoRD() {
   int state = digitalRead(PIN_PHOTORD);
-  Serial.print("photord ");
+  //Serial.print("photord ");
   Serial.println(state);
 }

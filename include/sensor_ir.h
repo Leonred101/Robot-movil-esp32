@@ -1,15 +1,16 @@
 #pragma once
 #include "config.h"
+#include <math.h>
 
-// Este archivo contiene la lógica activa para el sensor IR.
-// El resto de sensores queda comentado temporalmente en el proyecto.
+// This file contains the active logic for the IR sensor.
+// The rest of the sensors remain temporarily commented out in the project.
 
 inline void initIR() {
-  // Pines analógicos quedan como INPUT por defecto.
+  // Analog pins remain as INPUT by default.
 }
 
 inline void readIR() {
-  // Filtro de promedio móvil por sobremuestreo (16 lecturas).
+  // Average 16 readings before applying the datasheet curve approximation.
   uint32_t sum = 0;
   for (int i = 0; i < 16; ++i) {
     sum += analogReadMilliVolts(PIN_IR);
@@ -17,6 +18,13 @@ inline void readIR() {
   }
   uint32_t mv = sum / 16;
 
-  Serial.print("infrared ");
-  Serial.println(mv); // Entrega la lectura estable en mV.
+  float voltage = mv / 1000.0f;
+  float distanceCm = 12.08f * powf(voltage, -1.058f);
+
+  if (distanceCm < 4.0f || distanceCm > 30.0f) {
+    Serial.println("nan");
+    return;
+  }
+
+  Serial.println(distanceCm, 1);
 }

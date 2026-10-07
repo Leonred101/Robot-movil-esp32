@@ -2,13 +2,13 @@
 #include "config.h"
 
 inline void initContact() {
-  // El contacto se configura con pull-down para quedar en estado bajo
-  // por defecto y cambiar a HIGH cuando se cierre el circuito.
+  // The contact is configured with pull-down to remain in low state
+  // by default and change to HIGH when the circuit is closed.
   pinMode(PIN_CONTACT, INPUT_PULLDOWN);
 }
 
 inline void readContact() {
   int state = digitalRead(PIN_CONTACT);
-  Serial.print("contact ");
+  //Serial.print("contact ");
   Serial.println(state);
 }
